@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -9,7 +10,7 @@ import { Input } from '@/components/ui/input'; // Though not directly used, Text
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { KeyRound, Copy, Award, Download, Loader2 } from 'lucide-react';
+import { KeyRound, Copy, Award, Download, Loader2, FileKey } from 'lucide-react';
 
 export default function TokenForgePage() {
   const [publicKey, setPublicKey] = useState<string | null>(null);
@@ -66,6 +67,23 @@ export default function TokenForgePage() {
       toast({ title: "Copied to clipboard", description: `${type} copied.` });
     } catch (err) {
       toast({ variant: "destructive", title: "Error", description: `Failed to copy ${type}.` });
+    }
+  };
+
+  const handleCopyToClipboardPem = async () => {
+    if (!privateKey) {
+      toast({ variant: "destructive", title: "Error", description: "Private key not available." });
+      return;
+    }
+    try {
+      const privateKeyJwk = JSON.parse(privateKey) as JWK;
+      const importedPrivateKey = await jose.importJWK(privateKeyJwk, 'RS256');
+      const pemKey = await jose.exportPKCS8(importedPrivateKey);
+      await navigator.clipboard.writeText(pemKey);
+      toast({ title: "Copied to clipboard", description: "Private Key (PEM) copied." });
+    } catch (err) {
+      console.error("PEM export/copy error:", err);
+      toast({ variant: "destructive", title: "Error", description: "Failed to copy Private Key (PEM). See console for details." });
     }
   };
 
@@ -141,8 +159,8 @@ export default function TokenForgePage() {
               <div className="space-y-2">
                 <Label htmlFor="publicKey" className="font-semibold">Public Key (JWK)</Label>
                 <Textarea id="publicKey" value={publicKey} readOnly rows={5} className="font-mono text-sm bg-muted/50 rounded-md shadow-inner" />
-                <Button variant="outline" size="sm" onClick={() => handleCopyToClipboard(publicKey, 'Public Key')} className="mt-1">
-                  <Copy className="mr-2 h-4 w-4" /> Copy Public Key
+                <Button variant="outline" size="sm" onClick={() => handleCopyToClipboard(publicKey, 'Public Key (JWK)')} className="mt-1">
+                  <Copy className="mr-2 h-4 w-4" /> Copy Public Key (JWK)
                 </Button>
               </div>
             )}
@@ -150,9 +168,14 @@ export default function TokenForgePage() {
               <div className="space-y-2">
                 <Label htmlFor="privateKey" className="font-semibold">Private Key (JWK)</Label>
                 <Textarea id="privateKey" value={privateKey} readOnly rows={8} className="font-mono text-sm bg-muted/50 rounded-md shadow-inner" />
-                <Button variant="outline" size="sm" onClick={() => handleCopyToClipboard(privateKey, 'Private Key')} className="mt-1">
-                  <Copy className="mr-2 h-4 w-4" /> Copy Private Key
-                </Button>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  <Button variant="outline" size="sm" onClick={() => handleCopyToClipboard(privateKey, 'Private Key (JWK)')} disabled={!privateKey}>
+                    <Copy className="mr-2 h-4 w-4" /> Copy Private Key (JWK)
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleCopyToClipboardPem} disabled={!privateKey}>
+                    <FileKey className="mr-2 h-4 w-4" /> Copy Private Key (PEM)
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>
