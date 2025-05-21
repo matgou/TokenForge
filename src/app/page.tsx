@@ -111,6 +111,7 @@ export default function TokenForgePage() {
     setPublicKey(null);
     setPrivateKey(null);
     setPrivateKeyPem(null);
+    setPublicKeyPem(null);
 
     try {
       const privateJwkToImport = JSON.parse(importedPrivateKeyInput) as JWK;
@@ -132,11 +133,17 @@ export default function TokenForgePage() {
         n: confirmedPrivateJwk.n,
         e: confirmedPrivateJwk.e,
         alg: confirmedPrivateJwk.alg || 'RS256',
+        ext: true,
       };
       if (confirmedPrivateJwk.kid) {
         publicJwkForExport.kid = confirmedPrivateJwk.kid;
       }
       setPublicKey(JSON.stringify(publicJwkForExport, null, 2));
+      
+      // Import the public JWK to get a CryptoKey before exporting to SPKI
+      const importedPublicCryptoKey = await jose.importJWK(publicJwkForExport, publicJwkForExport.alg || 'RS256');
+      const pemPub = await jose.exportSPKI(importedPublicCryptoKey);
+      setPublicKeyPem(pemPub);
 
       toast({ title: "Success", description: "Private key imported successfully." });
     } catch (e: any) {
@@ -221,7 +228,7 @@ export default function TokenForgePage() {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="text-2xl flex items-center"><KeyRound className="mr-2 h-6 w-6 text-primary" />Generate RSA Key Pair</CardTitle>
-            <CardDescription>Create a new RSA256 key pair for signing your JWTs. Keys are in JWK format.</CardDescription>
+            <CardDescription>Create a new RSA256 key pair for signing your JWTs. Keys are in JWK and PEM format.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Button onClick={handleGenerateKeys} disabled={isLoadingKeys} className="w-full sm:w-auto bg-primary hover:bg-primary/90">
@@ -232,12 +239,14 @@ export default function TokenForgePage() {
               <div className="space-y-2">
                 <Label htmlFor="publicKey" className="font-semibold">Public Key (JWK)</Label>
                 <Textarea id="publicKey" value={publicKey} readOnly rows={5} className="font-mono text-sm bg-muted/50 rounded-md shadow-inner" />
-                <Button variant="outline" size="sm" onClick={() => handleCopyToClipboard(publicKey, 'Public Key (JWK)')} className="mt-1">
-                  <Copy className="mr-2 h-4 w-4" /> Copy Public Key (JWK)
-                </Button> 
-                <Button variant="outline" size="sm" onClick={() => handleCopyToClipboard(publicKeyPem, 'Public Key (PEM)')} className="mt-1">
-                  <Copy className="mr-2 h-4 w-4" /> Copy Public Key (PEM)
-                </Button>
+                 <div className="flex flex-wrap gap-2 mt-1">
+                    <Button variant="outline" size="sm" onClick={() => handleCopyToClipboard(publicKey, 'Public Key (JWK)')} disabled={!publicKey}>
+                      <Copy className="mr-2 h-4 w-4" /> Copy Public Key (JWK)
+                    </Button> 
+                    <Button variant="outline" size="sm" onClick={() => handleCopyToClipboard(publicKeyPem, 'Public Key (PEM)')} disabled={!publicKeyPem}>
+                      <FileKey className="mr-2 h-4 w-4" /> Copy Public Key (PEM)
+                    </Button>
+                  </div>
               </div>
             )}
             {privateKey && (
