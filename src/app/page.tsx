@@ -16,6 +16,7 @@ export default function TokenForgePage() {
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [privateKey, setPrivateKey] = useState<string | null>(null);
   const [privateKeyPem, setPrivateKeyPem] = useState<string | null>(null);
+  const [publicKeyPem, setPublicKeyPem] = useState<string | null>(null);
   
   const [payload, setPayload] = useState<string>('{ "sub": "1234567890", "name": "John Doe", "iat": 1700000000 }');
   const [jwt, setJwt] = useState<string | null>(null);
@@ -84,10 +85,12 @@ export default function TokenForgePage() {
       const exportedPubKey = await jose.exportJWK(pubKeyJwk);
       const exportedPrivKey = await jose.exportJWK(privKeyJwk);
       const exportedPrivKeyPem = await jose.exportPKCS8(privKeyJwk);
+      const exportedPubKeyPem = await jose.exportSPKI(pubKeyJwk);
 
       setPublicKey(JSON.stringify(exportedPubKey, null, 2));
       setPrivateKey(JSON.stringify(exportedPrivKey, null, 2));
       setPrivateKeyPem(exportedPrivKeyPem);
+      setPublicKeyPem(exportedPubKeyPem);
       toast({ title: "Success", description: "RSA key pair generated." });
     } catch (e) {
       console.error("Key generation error:", e);
@@ -144,6 +147,7 @@ export default function TokenForgePage() {
       setPublicKey(null);
       setPrivateKey(null);
       setPrivateKeyPem(null);
+      setPublicKeyPem(null);
     }
     setIsLoadingImport(false);
   };
@@ -170,7 +174,7 @@ export default function TokenForgePage() {
     try {
       const parsedPayload = JSON.parse(payload);
       const privateKeyJwk = JSON.parse(privateKey) as JWK;
-      const importedPrivateKey = await jose.importJWK(privateKeyJwk, privateKeyJwk.alg || 'RS256', { extractable: true });
+      const importedPrivateKey = await jose.importJWK(privateKeyJwk, privateKeyJwk.alg || 'RS256');
 
       const signedJwt = await new jose.SignJWT(parsedPayload)
         .setProtectedHeader({ alg: privateKeyJwk.alg || 'RS256' })
@@ -230,6 +234,9 @@ export default function TokenForgePage() {
                 <Textarea id="publicKey" value={publicKey} readOnly rows={5} className="font-mono text-sm bg-muted/50 rounded-md shadow-inner" />
                 <Button variant="outline" size="sm" onClick={() => handleCopyToClipboard(publicKey, 'Public Key (JWK)')} className="mt-1">
                   <Copy className="mr-2 h-4 w-4" /> Copy Public Key (JWK)
+                </Button> 
+                <Button variant="outline" size="sm" onClick={() => handleCopyToClipboard(publicKeyPem, 'Public Key (PEM)')} className="mt-1">
+                  <Copy className="mr-2 h-4 w-4" /> Copy Public Key (PEM)
                 </Button>
               </div>
             )}
