@@ -15,6 +15,7 @@ import { KeyRound, Copy, Award, Download, Loader2, FileKey } from 'lucide-react'
 export default function TokenForgePage() {
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [privateKey, setPrivateKey] = useState<string | null>(null);
+  const [privateKeyPem, setPrivateKeyPem] = useState<string | null>(null);
   const [payload, setPayload] = useState<string>('{ "sub": "1234567890", "name": "John Doe", "iat": 1700000000 }');
   const [jwt, setJwt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -48,9 +49,11 @@ export default function TokenForgePage() {
       
       const exportedPubKey = await jose.exportJWK(pubKeyJwk);
       const exportedPrivKey = await jose.exportJWK(privKeyJwk);
+      const exportedPrivKeyPem = await jose.exportPKCS8(privKeyJwk);
 
       setPublicKey(JSON.stringify(exportedPubKey, null, 2));
       setPrivateKey(JSON.stringify(exportedPrivKey, null, 2));
+      setPrivateKeyPem(exportedPrivKeyPem);
       toast({ title: "Success", description: "RSA key pair generated." });
     } catch (e) {
       console.error("Key generation error:", e);
@@ -67,23 +70,6 @@ export default function TokenForgePage() {
       toast({ title: "Copied to clipboard", description: `${type} copied.` });
     } catch (err) {
       toast({ variant: "destructive", title: "Error", description: `Failed to copy ${type}.` });
-    }
-  };
-
-  const handleCopyToClipboardPem = async () => {
-    if (!privateKey) {
-      toast({ variant: "destructive", title: "Error", description: "Private key not available." });
-      return;
-    }
-    try {
-      const privateKeyJwk = JSON.parse(privateKey) as JWK;
-      const importedPrivateKey = await jose.importJWK(privateKeyJwk, 'RS256');
-      const pemKey = await jose.exportPKCS8(importedPrivateKey);
-      await navigator.clipboard.writeText(pemKey);
-      toast({ title: "Copied to clipboard", description: "Private Key (PEM) copied." });
-    } catch (err) {
-      console.error("PEM export/copy error:", err);
-      toast({ variant: "destructive", title: "Error", description: "Failed to copy Private Key (PEM). See console for details." });
     }
   };
 
@@ -172,7 +158,7 @@ export default function TokenForgePage() {
                   <Button variant="outline" size="sm" onClick={() => handleCopyToClipboard(privateKey, 'Private Key (JWK)')} disabled={!privateKey}>
                     <Copy className="mr-2 h-4 w-4" /> Copy Private Key (JWK)
                   </Button>
-                  <Button variant="outline" size="sm" onClick={handleCopyToClipboardPem} disabled={!privateKey}>
+                  <Button variant="outline" size="sm" onClick={() => handleCopyToClipboard(privateKeyPem, 'Private Key (PEM)')} disabled={!privateKey}>
                     <FileKey className="mr-2 h-4 w-4" /> Copy Private Key (PEM)
                   </Button>
                 </div>
